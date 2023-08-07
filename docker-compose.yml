@@ -25,124 +25,88 @@ services:
       - "80:80"
       - "8080:8080"
       - "443:443"
+      - "389:389"
+      - "636:636"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - ./certs:/letsencrypt
 
     depends_on:
       - api_server
+      - ldap_server
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 96M
+        reservations:
+          cpus: '0.25'
+          memory: 32M
 
   interface:
     image: ghcr.io/multifactorlab/multidirectory-web-admin:latest
     container_name: multidirectory_interface
-    environment:
-      API_URL: https://api.md.multifactor.dev
+    env_file:
+      - .env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.interface.rule=Host(`md.multifactor.dev`)"
+      - "traefik.http.routers.interface.rule=Host(`${INTRERFACE_DOMAIN}`)"
       - "traefik.http.routers.interface.entrypoints=websecure"
       - "traefik.http.routers.interface.tls.certresolver=md-resolver"
       - "traefik.http.services.interface.loadbalancer.server.port=80"
 
   ldap_server:
     image: ghcr.io/multifactorlab/multidirectory:latest
-    restart: unless-stopped
     container_name: multidirectory-ldap
-    environment:
-      DEBUG: 0
-      HOST: 0.0.0.0
-      POSTGRES_USER: user1
-      POSTGRES_PWD: password123
-      POSTGRES_HOST: postgres
-      SECRET_KEY: 6a0452ae20cab4e21b6e9d18fa4b7bf397dd66ec3968b2d7407694278fd84cce
+    restart: unless-stopped
+    env_file:
+      .env
     volumes:
       - ./logs:/app/logs
       - ./certs:/certs
     command: bash -c "alembic upgrade head && python ."
-    ports:
+    expose:
       - "389:389"
       - "636:636"
+    labels:
+      - "traefik.tcp.routers.ldap_server.tls=true"
+      - "traefik.tcp.routers.ldap_server.tls.certresolver=md-resolver"
+      - "traefik.http.services.ldap_server.loadbalancer.server.port=389"
+      - "traefik.tcp.routers.ldap_server.tls.passthrough=true"
+    depends_on:
+      - postgres
 
   api_server:
     image: ghcr.io/multifactorlab/multidirectory:latest
     container_name: multidirectory_api
     restart: unless-stopped
-    environment:
-      DEBUG: 0
-      HOST: 0.0.0.0
-      POSTGRES_USER: user1
-      POSTGRES_PWD: password123
-      POSTGRES_HOST: postgres
-      SECRET_KEY: 6a0452ae20cab4e21b6e9d18fa4b7bf397dd66ec3968b2d7407694278fd84cce
+    env_file:
+      .env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api_server.rule=Host(`api.md.multifactor.dev`)"
+      - "traefik.http.routers.api_server.rule=Host(`${API_URL}`)"
       - "traefik.http.routers.api_server.entrypoints=websecure"
       - "traefik.http.routers.api_server.tls.certresolver=md-resolver"
       - "traefik.http.services.api_server.loadbalancer.server.port=8000"
     command: bash -c "alembic upgrade head && uvicorn --factory web_app:create_app --host 0.0.0.0 --port 8000"
+    depends_on:
+      - postgres
 
   postgres:
     container_name: MD-postgres
     image: postgres
     restart: unless-stopped
+    env_file:
+      .env
     environment:
-      POSTGRES_USER: user1
-      POSTGRES_PASSWORD: password123
       PGDATA: /data/postgres
     volumes:
        - postgres:/data/postgres
-    ports:
+    expose:
       - "5432:5432"
-
-  pgadmin:
-    container_name: pgadmin_container
-    image: dpage/pgadmin4
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
-      PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    volumes:
-       - pgadmin:/var/lib/pgadmin
-    ports:
-      - "${PGADMIN_PORT:-5050}:80"
-    restart: unless-stopped
-    logging:
-      driver: "none"
-
-  # ssh-server:
-  #   container_name: md-ssh
-  #   image: ssh-ldap
-  #   build:
-  #     context: ./ssh
-  #   environment:
-  #     SERVER: "ldap://multidirectory"
-  #     BASE: "dc=multifactor,dc=dev"
-  #     BIND_DN: "cn=user,dc=multifactor,dc=dev"
-  #     BASE_PASSWORD: "password"
-  #   ports:
-  #     - "222:22"
-
-  wireshark:
-    image: lscr.io/linuxserver/wireshark:latest
-    container_name: wireshark
-    cap_add:
-      - NET_ADMIN
-    security_opt:
-      - seccomp:unconfined
-    network_mode: host
-    environment:
-      - PUID=1001
-      - PGID=1001
-      - TZ=Etc/UTC
-    volumes:
-      - wireshark:/config
-    ports:
-      - 3000:3000
-    restart: "no"
 
 volumes:
   traefik:
   postgres:
   pgadmin:
-  wireshark:
