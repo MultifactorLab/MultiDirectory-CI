@@ -4,6 +4,7 @@ services:
   traefik:
     image: "traefik:latest"
     container_name: traefik
+    restart: unless-stopped
     command:
       # - --metrics
       # - --metrics.prometheus.buckets=0.1,0.3,1.2,5.0
@@ -21,6 +22,8 @@ services:
       - --certificatesresolvers.md-resolver.acme.tlschallenge=true
       - --certificatesresolvers.md-resolver.acme.email=support@multifactor.com
       - --certificatesresolvers.md-resolver.acme.storage=/letsencrypt/acme.json
+      - --entryPoints.ldap-tls.address=:636
+      - --entryPoints.ldap.address=:389
     ports:
       - "80:80"
       - "8080:8080"
@@ -47,11 +50,12 @@ services:
   interface:
     image: ghcr.io/multifactorlab/multidirectory-web-admin:latest
     container_name: multidirectory_interface
+    restart: unless-stopped
     env_file:
       - .env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.interface.rule=Host(`${INTRERFACE_DOMAIN}`)"
+      - "traefik.http.routers.interface.rule=Host(`${DOMAIN}`)"
       - "traefik.http.routers.interface.entrypoints=websecure"
       - "traefik.http.routers.interface.tls.certresolver=md-resolver"
       - "traefik.http.services.interface.loadbalancer.server.port=80"
@@ -64,16 +68,20 @@ services:
       .env
     volumes:
       - ./logs:/app/logs
-      - ./certs:/certs
     command: bash -c "alembic upgrade head && python ."
-    expose:
-      - "389:389"
-      - "636:636"
     labels:
-      - "traefik.tcp.routers.ldap_server.tls=true"
-      - "traefik.tcp.routers.ldap_server.tls.certresolver=md-resolver"
-      - "traefik.http.services.ldap_server.loadbalancer.server.port=389"
-      - "traefik.tcp.routers.ldap_server.tls.passthrough=true"
+      - traefik.enable=true
+      - traefik.tcp.routers.ldap_server.rule=HostSNI(`*`)
+      - traefik.tcp.routers.ldap_server.service=ldap_server-svc
+      - traefik.tcp.services.ldap_server-svc.loadbalancer.server.port=389
+
+      - traefik.tcp.routers.ldap_server_tls.rule=HostSNI(`*`)
+      - traefik.tcp.routers.ldap_server_tls.tls=true
+      - traefik.tcp.routers.ldap_server_tls.tls.passthrough=true
+      - traefik.tcp.routers.ldap_server_tls.entrypoints=ldap-tls
+      - traefik.tcp.routers.ldap_server_tls.tls.certresolver=md-resolver
+      - traefik.tcp.routers.ldap_server_tls.service=ldap_server_tls
+      - traefik.tcp.services.ldap_server_tls.loadbalancer.server.port=389
     depends_on:
       - postgres
 
@@ -104,7 +112,7 @@ services:
     volumes:
        - postgres:/data/postgres
     expose:
-      - "5432:5432"
+      - 5432
 
 volumes:
   traefik:
