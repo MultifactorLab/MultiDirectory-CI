@@ -51,8 +51,8 @@ services:
     image: ghcr.io/multifactorlab/multidirectory-web-admin:latest
     container_name: multidirectory_interface
     restart: unless-stopped
-    env_file:
-      - .env
+    environment:
+      API_URL: https://${API_DOMAIN}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.interface.rule=Host(`${DOMAIN}`)"
@@ -93,7 +93,7 @@ services:
       .env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api_server.rule=Host(`${API_URL}`)"
+      - "traefik.http.routers.api_server.rule=Host(`${API_DOMAIN}`)"
       - "traefik.http.routers.api_server.entrypoints=websecure"
       - "traefik.http.routers.api_server.tls.certresolver=md-resolver"
       - "traefik.http.services.api_server.loadbalancer.server.port=8000"
