@@ -51,8 +51,9 @@ services:
     image: ghcr.io/multifactorlab/multidirectory-web-admin:latest
     container_name: multidirectory_interface
     restart: unless-stopped
+    hostname: interface
     environment:
-      API_URL: https://${API_DOMAIN}/api
+      API_URL: https://${DOMAIN}/api
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.interface.rule=Host(`${DOMAIN}`)"
@@ -71,7 +72,7 @@ services:
     command: bash -c "alembic upgrade head && python ."
     labels:
       - traefik.enable=true
-      - traefik.tcp.routers.ldap_server.rule=HostSNI(`*`)
+      - traefik.tcp.routers.ldap_server.rule=HostSNI(`${DOMAIN}`)
       - traefik.tcp.routers.ldap_server.service=ldap_server-svc
       - traefik.tcp.services.ldap_server-svc.loadbalancer.server.port=389
 
@@ -91,9 +92,10 @@ services:
     restart: unless-stopped
     env_file:
       .env
+    hostname: api_server
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api.rule=Host(`${API_DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
       - "traefik.http.routers.api.tls.certresolver=md-resolver"
       - "traefik.http.routers.api.entrypoints=websecure"
       - "traefik.http.services.api.loadbalancer.server.port=8000"
