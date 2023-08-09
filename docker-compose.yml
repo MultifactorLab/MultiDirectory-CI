@@ -71,7 +71,7 @@ services:
     command: bash -c "alembic upgrade head && python ."
     labels:
       - traefik.enable=true
-      - traefik.tcp.routers.ldap_server.rule=HostSNI(`${DOMAIN}`)
+      - traefik.tcp.routers.ldap_server.rule=HostSNI(`*`)
       - traefik.tcp.routers.ldap_server.service=ldap_server-svc
       - traefik.tcp.services.ldap_server-svc.loadbalancer.server.port=389
 
