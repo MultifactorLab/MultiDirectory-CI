@@ -1,8 +1,8 @@
 #!/bin/bash
 touch .env
 > .env
-read -p "Enter postgres user [default: pg-user]: " postgres_user
-postgres_user=${postgres_user:-pg-user}
+read -p "Enter postgres user [default: user]: " postgres_user
+postgres_user=${postgres_user:-user}
 echo "POSTGRES_USER="$postgres_user >> .env
 
 read -p "Enter postgres host (leave it default if you are using default database) [default: postgres]: " postgres_host
