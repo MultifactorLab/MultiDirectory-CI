@@ -43,6 +43,7 @@ IF "%api_domain%"=="" echo api domain required && goto api
 set /p "domain=Enter interface domain: "
 IF "%domain%"=="" echo domain required && goto interface
 
+IF "%domain%"=="%api_domain%" echo required two different domains && goto api
 
 echo POSTGRES_HOST=%postgres_host% >> .env
 echo POSTGRES_USER=%postgres_user% >> .env
