@@ -8,7 +8,7 @@ services:
     command:
       # - --metrics
       # - --metrics.prometheus.buckets=0.1,0.3,1.2,5.0
-      - --log.level=DEBUG
+      - --log.level=INFO
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       # - --accesslog=true
@@ -52,7 +52,7 @@ services:
     container_name: multidirectory_interface
     restart: unless-stopped
     environment:
-      API_URL: https://${API_DOMAIN}
+      API_URL: https://${API_DOMAIN}/api
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.interface.rule=Host(`${DOMAIN}`)"
@@ -71,17 +71,17 @@ services:
     command: bash -c "alembic upgrade head && python ."
     labels:
       - traefik.enable=true
-      - traefik.tcp.routers.ldap_server.rule=HostSNI(`*`)
+      - traefik.tcp.routers.ldap_server.rule=HostSNI(`${DOMAIN}`)
       - traefik.tcp.routers.ldap_server.service=ldap_server-svc
       - traefik.tcp.services.ldap_server-svc.loadbalancer.server.port=389
 
-      - traefik.tcp.routers.ldap_server_tls.rule=HostSNI(`*`)
-      - traefik.tcp.routers.ldap_server_tls.tls=true
-      - traefik.tcp.routers.ldap_server_tls.tls.passthrough=true
-      - traefik.tcp.routers.ldap_server_tls.entrypoints=ldap-tls
-      - traefik.tcp.routers.ldap_server_tls.tls.certresolver=md-resolver
-      - traefik.tcp.routers.ldap_server_tls.service=ldap_server_tls
-      - traefik.tcp.services.ldap_server_tls.loadbalancer.server.port=389
+      # - traefik.tcp.routers.ldap_server_tls.rule=HostSNI(`*`)
+      # - traefik.tcp.routers.ldap_server_tls.tls=true
+      # - traefik.tcp.routers.ldap_server_tls.tls.passthrough=true
+      # - traefik.tcp.routers.ldap_server_tls.entrypoints=ldap-tls
+      # - traefik.tcp.routers.ldap_server_tls.tls.certresolver=md-resolver
+      # - traefik.tcp.routers.ldap_server_tls.service=ldap_server_tls
+      # - traefik.tcp.services.ldap_server_tls.loadbalancer.server.port=389
     depends_on:
       - postgres
 
@@ -93,10 +93,15 @@ services:
       .env
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api_server.rule=Host(`${API_DOMAIN}`)"
-      - "traefik.http.routers.api_server.entrypoints=websecure"
-      - "traefik.http.routers.api_server.tls.certresolver=md-resolver"
-      - "traefik.http.services.api_server.loadbalancer.server.port=8000"
+      - "traefik.http.routers.api.rule=Host(`${API_DOMAIN}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.api.tls.certresolver=md-resolver"
+      - "traefik.http.routers.api.entrypoints=websecure"
+      - "traefik.http.services.api.loadbalancer.server.port=8000"
+      - "traefik.http.routers.api.service=api"
+      - "traefik.http.routers.api.middlewares=api_strip"
+      - "traefik.http.middlewares.api_strip.stripprefix.prefixes=/api"
+      - "traefik.http.middlewares.api_strip.stripprefix.forceslash=false"
+
     command: bash -c "alembic upgrade head && uvicorn --factory web_app:create_app --host 0.0.0.0 --port 8000"
     depends_on:
       - postgres
