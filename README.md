@@ -24,7 +24,7 @@ cd MultiDirecory-CI
 
 4. Generate `.env` file with:
 
-    Run `./setup.sh` for Unix systems or `./setup.bat` fow Windows, then follow instructions.
+    Run `./setup.sh` for Unix systems or `./setup.bat` for Windows, then follow instructions.
     After generating `.env` file, services are ready to deploy
 
 5. Start services with command:
