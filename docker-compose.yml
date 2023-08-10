@@ -8,35 +8,32 @@ services:
     command:
       # - --metrics
       # - --metrics.prometheus.buckets=0.1,0.3,1.2,5.0
-      - --log.level=INFO
+      - --log.level=ERROR
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       # - --accesslog=true
       # - --accesslog.filepath=/var/log/traefik/access.log
       - --accesslog.format=json
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --entrypoints.web.http.redirections.entryPoint.to=websecure
-      - --entrypoints.web.http.redirections.entryPoint.scheme=https
-      - --entrypoints.web.http.redirections.entrypoint.permanent=true
+
       - --certificatesresolvers.md-resolver.acme.tlschallenge=true
       - --certificatesresolvers.md-resolver.acme.email=support@multifactor.com
       - --certificatesresolvers.md-resolver.acme.storage=/letsencrypt/acme.json
-      - --entryPoints.ldap-tls.address=:636
-      - --entryPoints.ldap.address=:389
+
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entryPoints.websecure.http.tls=true
+      - --entryPoints.websecure.http.tls.certResolver=md-resolver
+
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --entrypoints.web.http.redirections.entrypoint.permanent=true
     ports:
       - "80:80"
       - "8080:8080"
       - "443:443"
-      - "389:389"
-      - "636:636"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - ./certs:/letsencrypt
-
-    depends_on:
-      - api_server
-      - ldap_server
 
     deploy:
       resources:
@@ -65,26 +62,42 @@ services:
     image: ghcr.io/multifactorlab/multidirectory:latest
     container_name: multidirectory-ldap
     restart: unless-stopped
+    hostname: multidirectory-ldap
     env_file:
       .env
     volumes:
+      - ./certs:/certs
       - ./logs:/app/logs
     command: bash -c "alembic upgrade head && python ."
+    ports:
+      - 389:389
     labels:
       - traefik.enable=true
       - traefik.tcp.routers.ldap_server.rule=HostSNI(`*`)
       - traefik.tcp.routers.ldap_server.service=ldap_server-svc
-      - traefik.tcp.services.ldap_server-svc.loadbalancer.server.port=389
-
-      # - traefik.tcp.routers.ldap_server_tls.rule=HostSNI(`*`)
-      # - traefik.tcp.routers.ldap_server_tls.tls=true
-      # - traefik.tcp.routers.ldap_server_tls.tls.passthrough=true
-      # - traefik.tcp.routers.ldap_server_tls.entrypoints=ldap-tls
-      # - traefik.tcp.routers.ldap_server_tls.tls.certresolver=md-resolver
-      # - traefik.tcp.routers.ldap_server_tls.service=ldap_server_tls
-      # - traefik.tcp.services.ldap_server_tls.loadbalancer.server.port=389
+      - traefik.tcp.routers.ldap_server.entrypoints=ldap
     depends_on:
       - postgres
+
+  ldaps_server:
+    image: ghcr.io/multifactorlab/multidirectory:latest
+    container_name: multidirectory-ldaps
+    restart: unless-stopped
+    hostname: multidirectory-ldaps
+    env_file:
+      .env
+    environment:
+      PORT: 636
+      USE_CORE_TLS: 1
+
+    depends_on:
+      - postgres
+    volumes:
+      - ./certs:/certs
+      - ./logs:/app/logs
+    command: bash -c "alembic upgrade head && python ."
+    ports:
+      - 636:636
 
   api_server:
     image: ghcr.io/multifactorlab/multidirectory:latest
