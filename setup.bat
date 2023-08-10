@@ -19,11 +19,11 @@ set postgres_password=%password%
 set count=0
 set length=128
 
-:Loop
+:Loop2
 set /a count+=1
 set /a rand=%Random%%%61
 set secret_key=!secret_key!!char:~%rand%,1!
-if !count! leq !length! goto Loop
+if !count! leq !length! goto Loop2
 
 
 set "postgres_user=user"
