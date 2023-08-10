@@ -1,6 +1,13 @@
 # MultiDirectory-CI
 Ready to deploy ldap and http server.
 
+Configuration repository for
+1. [MultiDirecory](https://github.com/MultifactorLab/MultiDirectory) - ldap and JSON web API server
+
+2. [MultiDirectory-Web-Admin](https://github.com/MultifactorLab/MultiDirectory-Web-Admin) - web interface for API
+
+All services are running through [traefik](https://doc.traefik.io/traefik/providers/docker/), using [postgres](https://www.postgresql.org/) as database, other DBMS are incompatible.
+
 ## Installation
 
 1. Install [docker](https://docs.docker.com/engine/install/) and [docker compose](https://docs.docker.com/compose/install/)
@@ -22,7 +29,7 @@ git clone https://github.com/MultifactorLab/MultiDirectory-CI.git
 cd MultiDirecory-CI
 ```
 
-4. Generate `.env` file with:
+4. Generate config `.env` file with:
 
     Run `./setup.sh` for Unix systems or `./setup.bat` for Windows, then follow instructions.
     After generating `.env` file, services are ready to deploy
@@ -63,11 +70,13 @@ To access docs and redoc of API, request `/api/redoc` and `/api/docs` url from y
 
 ## Custom database
 
-To deploy MultiDirectory with custom database, you can setup following variables in `.env` file:
+To deploy MultiDirectory with custom postgres database, you can setup following variables in `.env` file:
 
     POSTGRES_HOST
     POSTGRES_USER
     POSTGRES_PASSWORD
     POSTGRES_DB
 
-Please, note, in that case you may need to remove `postgres` service from `docker-compose.yml` file.
+Please, note, other DBMS, rather than PostgreSQL, are incompatiple with MultiDirectory app.
+
+In that case you may need to remove `postgres` service from `docker-compose.yml` file.
