@@ -74,10 +74,10 @@ services:
     labels:
       - traefik.enable=true
       - traefik.tcp.routers.ldap_server.rule=HostSNI(`*`)
-      - traefik.tcp.routers.ldap_server.service=ldap_server-svc
-      - traefik.tcp.routers.ldap_server.entrypoints=ldap
+
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   ldaps_server:
     image: ghcr.io/multifactorlab/multidirectory:latest
@@ -91,11 +91,16 @@ services:
       USE_CORE_TLS: 1
 
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - ./certs:/certs
       - ./logs:/app/logs
     command: bash -c "alembic upgrade head && python ."
+    labels:
+      - traefik.enable=true
+      - traefik.tcp.routers.ldaps_server.rule=HostSNI(`*`)
+
     ports:
       - 636:636
 
@@ -119,7 +124,8 @@ services:
 
     command: bash -c "alembic upgrade head && uvicorn --factory web_app:create_app --host 0.0.0.0 --port 8000"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
   postgres:
     container_name: MD-postgres
@@ -133,6 +139,13 @@ services:
        - postgres:/data/postgres
     expose:
       - 5432
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d postgres -U ${POSTGRES_USER}"]
+      interval: 6s
+      timeout: 60s
+      retries: 10
+      start_period: 5s
 
 volumes:
   traefik:
