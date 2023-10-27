@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   traefik:
-    image: "traefik:latest"
+    image: "traefik::v2.6"
     container_name: traefik
     restart: unless-stopped
     command:
@@ -131,7 +131,7 @@ services:
 
   postgres:
     container_name: MD-postgres
-    image: postgres
+    image: postgres:16
     restart: unless-stopped
     env_file:
       .env
