@@ -111,6 +111,8 @@ services:
     env_file:
       .env
     hostname: api_server
+    environment:
+      USE_CORE_TLS: 1
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)"
