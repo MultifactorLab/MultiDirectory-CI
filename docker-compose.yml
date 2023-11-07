@@ -58,6 +58,17 @@ services:
       - "traefik.http.routers.interface.tls.certresolver=md-resolver"
       - "traefik.http.services.interface.loadbalancer.server.port=80"
 
+  migrations:
+    image: ghcr.io/multifactorlab/multidirectory:latest
+    container_name: multidirectory_migrations
+    restart: "no"
+    env_file:
+      .env
+    command: alembic upgrade head
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   ldap_server:
     image: ghcr.io/multifactorlab/multidirectory:latest
     container_name: multidirectory-ldap
@@ -68,16 +79,12 @@ services:
     volumes:
       - ./certs:/certs
       - ./logs:/app/logs
-    command: bash -c "alembic upgrade head && python ."
+    command: python .
     ports:
       - 389:389
-    labels:
-      - traefik.enable=true
-      - traefik.tcp.routers.ldap_server.rule=HostSNI(`*`)
-
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
 
   ldaps_server:
     image: ghcr.io/multifactorlab/multidirectory:latest
@@ -89,18 +96,13 @@ services:
     environment:
       PORT: 636
       USE_CORE_TLS: 1
-
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
     volumes:
       - ./certs:/certs
       - ./logs:/app/logs
-    command: bash -c "alembic upgrade head && python ."
-    labels:
-      - traefik.enable=true
-      - traefik.tcp.routers.ldaps_server.rule=HostSNI(`*`)
-
+    command: python .
     ports:
       - 636:636
 
@@ -124,10 +126,10 @@ services:
       - "traefik.http.middlewares.api_strip.stripprefix.prefixes=/api"
       - "traefik.http.middlewares.api_strip.stripprefix.forceslash=false"
 
-    command: bash -c "alembic upgrade head && uvicorn --factory web_app:create_app --host 0.0.0.0 --port 8000 --loop uvloop"
+    command: uvicorn --factory web_app:create_app --host 0.0.0.0 --port 8000 --loop uvloop
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
 
   postgres:
     container_name: MD-postgres
