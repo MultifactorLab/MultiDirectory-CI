@@ -41,11 +41,6 @@ Compose v2:
 docker compose pull; docker compose up -d
 ```
 
-Compose v1:
-```sh
-docker-compose pull; docker-compose up -d
-```
-
 ## Update services:
 
 Run following command:
@@ -53,12 +48,6 @@ Run following command:
 Compose v2:
 ```sh
 docker compose down; docker compose pull; docker compose up -d
-```
-or
-
-Compose v1:
-```sh
-docker-compose down; docker-compose pull; docker-compose up -d
 ```
 
 To update config files (docker-compose.yml and setup.*), please, redownload repository, using step 3.
