@@ -79,7 +79,7 @@ services:
     volumes:
       - ./certs:/certs
       - ./logs:/app/logs
-    command: python . -oo
+    command: python -OO . --loop uvloop
     ports:
       - 389:389
     depends_on:
@@ -102,7 +102,7 @@ services:
     volumes:
       - ./certs:/certs
       - ./logs:/app/logs
-    command: python . -oo
+    command: python -OO . --loop uvloop
     ports:
       - 636:636
 
